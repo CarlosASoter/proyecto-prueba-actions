@@ -1,62 +1,64 @@
-# Nombre del flujo de trabajo que aparecerá en la pestaña "Actions"
-name: Integración Continua (Node.js)
+name: Pipeline de Integración Continua Total
 
-# Eventos que disparan este flujo
 on:
   push:
-    branches: [ "main", "master" ] # Se ejecuta al hacer push directo a main o master
+    branches: [ "main", "master" ]
   pull_request:
-    branches: [ "main", "master" ] # Se ejecuta al abrir un PR hacia main o master
+    branches: [ "main", "master" ]
 
-# Definición de los trabajos (jobs) a realizar
 jobs:
-  # Nombre de nuestro trabajo principal: "validar-codigo"
   validar-codigo:
-    # El sistema operativo donde correrá esto (Ubuntu es rápido y barato/gratis)
     runs-on: ubuntu-latest
 
-    # Estrategia de matriz: Nos permite probar en varias versiones de Node si quisiéramos
     strategy:
       matrix:
-        node-version: [18.x, 20.x] # Probaremos en Node 18 y Node 20 para asegurar compatibilidad
+        node-version: [18.x, 20.x]
 
-    # Pasos secuenciales que ejecutará la máquina
     steps:
-      # 1. Este paso descarga tu código del repositorio a la máquina virtual
       - name: Hacer Checkout del código
         uses: actions/checkout@v4
 
-      # 2. Prepara el entorno de Node.js según la versión de la matriz
       - name: Instalar Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm' # Importante: Guarda en caché las librerías para que las próximas veces sea más rápido
+          cache: 'npm'
 
-      # 3. Instala las dependencias. 'npm ci' es mejor que 'npm install' para entornos automáticos
-      # porque respeta estrictamente el package-lock.json
       - name: Instalar dependencias
         run: npm ci
 
-      # 4. Auditoría de seguridad (Opcional pero muy útil)
-      # Revisa si instalaste alguna librería con vulnerabilidades conocidas
       - name: Auditoría de seguridad
-        run: npm audit --audit-level=high || true 
-        # El "|| true" evita que falle todo el workflow si hay vulnerabilidades leves, 
-        # pero verás el reporte en los logs.
+        run: npm audit --audit-level=moderate
 
-      # 5. Linter (Verificación de estilo)
-      # Nota: Debes tener un script "lint" en tu package.json. Si no tienes, comenta esta línea.
       - name: Verificar estilo de código (Lint)
         run: npm run lint --if-present
-        # --if-present hace que no falle si no tienes el script configurado aún.
 
-      # 6. Ejecutar Tests
-      # Ejecuta tus pruebas unitarias. Vital para asegurar que nada se rompió.
-      - name: Ejecutar Tests
-        run: npm test --if-present
+      - name: Verificar formato (Prettier)
+        run: npx prettier --check . --ignore-path .gitignore || echo "Prettier no configurado"
 
-      # 7. Construcción (Build)
-      # Intenta compilar el proyecto. Útil si usas React, TypeScript, etc.
+      # CAMBIO CLAVE AQUÍ: 
+      # Quitamos el --if-present de aquí porque ya sabemos que tienes Jest.
+      # Usamos 'npm run test' con los '--' para pasar '--coverage' limpiamente.
+      - name: Ejecutar Tests con Cobertura
+        run: npm run test -- --coverage
+
       - name: Construir proyecto
         run: npm run build --if-present
+
+      - name: Subir artefacto del Build
+        if: success()
+        uses: actions/upload-artifact@v4
+        with:
+          name: binarios-node-${{ matrix.node-version }}
+          path: |
+            dist/
+            build/
+          if-no-files-found: ignore
+
+      - name: Generar resumen en GitHub
+        if: always()
+        run: |
+          echo "### 📊 Resumen de la Ejecución" >> $GITHUB_STEP_SUMMARY
+          echo "- **Resultado**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Versión de Node**: ${{ matrix.node-version }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Fecha**: $(date)" >> $GITHUB_STEP_SUMMARY
