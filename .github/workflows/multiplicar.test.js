@@ -1,7 +1,7 @@
 const multiplicar = require('./multiplicar');
 
 test('multiplicar 3 x 3 es igual a 9', () => {
-  expect(multiplicar(3, 3)).toBe(9);
+  expect(multiplicar(3, 3)).toBe(10);
 });
 
 // Prueba que fallaría si el código estuviera mal
