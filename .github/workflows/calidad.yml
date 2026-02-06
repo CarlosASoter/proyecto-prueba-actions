@@ -36,11 +36,12 @@ jobs:
       - name: Verificar formato (Prettier)
         run: npx prettier --check . --ignore-path .gitignore || echo "Prettier no configurado"
 
-      # PASO CORREGIDO AQUÍ
+      # CAMBIO CLAVE AQUÍ: 
+      # Quitamos el --if-present de aquí porque ya sabemos que tienes Jest.
+      # Usamos 'npm run test' con los '--' para pasar '--coverage' limpiamente.
       - name: Ejecutar Tests con Cobertura
-        run: npm test --if-present -- --coverage
+        run: npm run test -- --coverage
 
-      # PASO CORREGIDO AQUÍ TAMBIÉN
       - name: Construir proyecto
         run: npm run build --if-present
 
