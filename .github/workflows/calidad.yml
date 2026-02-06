@@ -1,4 +1,4 @@
-# Nombre del flujo de trabajo que aparecerá en la pestaña "Actions" de GitHub
+# Nombre del flujo de trabajo que aparecerá en la pestaña "Actions"
 name: Integración Continua (Node.js)
 
 # Eventos que disparan este flujo
