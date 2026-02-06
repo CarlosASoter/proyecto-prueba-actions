@@ -1,7 +1,5 @@
-# Nombre del flujo que verás en la pestaña Actions
 name: Pipeline de Integración Continua Total
 
-# Disparadores: Se activa en push y PR a las ramas principales
 on:
   push:
     branches: [ "main", "master" ]
@@ -10,53 +8,44 @@ on:
 
 jobs:
   validar-codigo:
-    # Entorno de ejecución
     runs-on: ubuntu-latest
 
-    # Matriz para probar en múltiples versiones de Node.js
     strategy:
       matrix:
         node-version: [18.x, 20.x]
 
     steps:
-      # 1. Descarga el código del repositorio
       - name: Hacer Checkout del código
         uses: actions/checkout@v4
 
-      # 2. Configura Node.js con la versión de la matriz y activa caché de npm
       - name: Instalar Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
-      # 3. Instalación limpia de dependencias (basada en package-lock.json)
       - name: Instalar dependencias
         run: npm ci
 
-      # 4. Auditoría de seguridad (Nivel moderado para no dejar pasar riesgos)
       - name: Auditoría de seguridad
         run: npm audit --audit-level=moderate
 
-      # 5. Linter: Verifica calidad de escritura del código
       - name: Verificar estilo de código (Lint)
         run: npm run lint --if-present
 
-      # 6. Prettier: Verifica que el formato visual sea correcto
       - name: Verificar formato (Prettier)
         run: npx prettier --check . --ignore-path .gitignore || echo "Prettier no configurado"
 
-      # 7. Tests + Cobertura: Ejecuta pruebas y genera reporte de qué falta por probar
+      # PASO CORREGIDO AQUÍ
       - name: Ejecutar Tests con Cobertura
-        run: npm test -- --coverage --if-present
+        run: npm test --if-present -- --coverage
 
-      # 8. Build: Compila el proyecto
+      # PASO CORREGIDO AQUÍ TAMBIÉN
       - name: Construir proyecto
         run: npm run build --if-present
 
-      # 9. Artefactos: Guarda la carpeta de salida (dist o build) para descargarla
       - name: Subir artefacto del Build
-        if: success() # Solo si el build tuvo éxito
+        if: success()
         uses: actions/upload-artifact@v4
         with:
           name: binarios-node-${{ matrix.node-version }}
@@ -65,9 +54,8 @@ jobs:
             build/
           if-no-files-found: ignore
 
-      # 10. Resumen: Escribe información útil en la página principal del Action
       - name: Generar resumen en GitHub
-        if: always() # Se ejecuta aunque fallen pasos anteriores para saber qué pasó
+        if: always()
         run: |
           echo "### 📊 Resumen de la Ejecución" >> $GITHUB_STEP_SUMMARY
           echo "- **Resultado**: ${{ job.status }}" >> $GITHUB_STEP_SUMMARY
